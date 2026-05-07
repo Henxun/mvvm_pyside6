@@ -1,18 +1,24 @@
-```
 # Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-env/
+*.so
+*.egg-info/
+
+# Virtual environments
 venv/
 .venv/
-.ENV
-.ENV.*
-.venv/
-.venv.*
-.conda/
+env/
+.ENV/
+
+# Build artifacts
+build/
+dist/
+*.egg
+
+# Testing
 .coverage
 coverage/
 htmlcov/
@@ -28,18 +34,17 @@ dist/
 build/
 *.egg
 
-# OS
-.DS_Store
-Thumbs.db
-
 # Logs
 *.log
 
 # Environment variables
 .env
 .env.local
-.env.*
-!.env.example
+*.env.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
 
 # IDE
 .vscode/
@@ -47,11 +52,3 @@ Thumbs.db
 *.swp
 *.swo
 *.tmp
-
-# Testing
-.coverage*
-coverage.xml
-htmlcov/
-.pytest_cache/
-.hypothesis/
-```
