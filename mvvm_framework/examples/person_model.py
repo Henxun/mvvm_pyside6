@@ -24,6 +24,9 @@ class Person(Model):
         self._age = age
         self._email = email
         self._is_active = is_active
+        # Register dependencies for computed properties
+        self.register_dependency("display_name", "name")
+        self.register_dependency("display_name", "age")
     
     @property
     def name(self) -> str:
@@ -86,10 +89,9 @@ class Person(Model):
             lambda: f"{self._name} ({self._age} years old)" if self._name else ""
         )
     
-    # Register dependencies for computed properties
-    def __init_subclass__(cls, **kwargs):
-        super().__init_subclass__(**kwargs)
-        # This would be called when Person is subclassed
+    def __post_init__(self):
+        """Placeholder for potential subclass customization."""
+        pass
     
     def validate_name(self, value: str) -> str | None:
         """Validate the name property."""

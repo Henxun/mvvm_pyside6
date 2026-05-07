@@ -90,12 +90,13 @@ class Binding:
         
         # Widget -> ViewModel (two-way binding)
         if two_way:
-            if hasattr(widget, 'textChanged'):
-                widget.textChanged.connect(
+            # Prefer textEdited to avoid redundant updates from programmatic setText
+            if hasattr(widget, 'textEdited'):
+                widget.textEdited.connect(
                     lambda text: setattr(viewmodel, property_name, text) if hasattr(viewmodel, property_name) else None
                 )
-            elif hasattr(widget, 'textEdited'):
-                widget.textEdited.connect(
+            elif hasattr(widget, 'textChanged'):
+                widget.textChanged.connect(
                     lambda text: setattr(viewmodel, property_name, text) if hasattr(viewmodel, property_name) else None
                 )
     

@@ -5,21 +5,23 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
-env/
+*.so
+*.egg-info/
+
+# Virtual environments
 venv/
 .venv/
-.ENV
-.ENV.*
-.venv.bak/
-.python-version
+env/
+.ENV/
 
 # Build artifacts
 build/
 dist/
-*.egg-info/
+*.egg
 
 # Testing
 .coverage
+coverage/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
@@ -27,17 +29,19 @@ htmlcov/
 # Logs
 *.log
 
-# OS generated files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-
 # Environment variables
 .env
 .env.local
-.env.*
+*.env.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
 ```

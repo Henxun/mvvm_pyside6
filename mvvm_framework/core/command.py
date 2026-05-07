@@ -82,7 +82,7 @@ class Command(QObject):
             try:
                 return self._can_execute()
             except Exception as e:
-                self._last_error = f"Error in can_execute: {str(e)}"
+                self._last_error = f"Error in can_execute: {e!s}"
                 return False
         
         return True
@@ -110,9 +110,9 @@ class Command(QObject):
             self.executed.emit()
             return result
         except Exception as e:
-            self._last_error = str(e)
-            self.executionFailed.emit(str(e))
-            return None
+            self._last_error = f"{e!s}"
+            self.executionFailed.emit(f"{e!s}")
+            raise  # Re-raise the exception instead of silently returning
         finally:
             self._is_executing = False
             self.canExecuteChanged.emit(self.can_execute())
@@ -192,16 +192,48 @@ class AsyncCommand(Command):
             
             return result
         except Exception as e:
-            self._last_error = str(e)
-            self.executionFailed.emit(str(e))
+            self._last_error = f"{e!s}"
+            self.executionFailed.emit(f"{e!s}")
             
             if self._on_failed:
-                self._on_failed(str(e))
+                self._on_failed(f"{e!s}")
             
             return None
         finally:
             self._is_executing = False
             self.canExecuteChanged.emit(self.can_execute())
+    
+    def execute(self, *args, **kwargs) -> Any:
+        """
+        Execute the async command by scheduling it on the event loop.
+        
+        This override ensures that when called via Command.execute (e.g., from bind_command),
+        the coroutine actually runs on the event loop.
+        
+        Args:
+            *args: Arguments to pass to the execute function
+            **kwargs: Keyword arguments to pass to the execute function
+            
+        Returns:
+            None (the coroutine is scheduled asynchronously)
+        """
+        import asyncio
+        
+        if not self.can_execute():
+            return None
+        
+        # Schedule the async execution
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            # No event loop in current thread, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        
+        # Create and schedule the coroutine
+        coro = self.execute_async(*args, **kwargs)
+        asyncio.ensure_future(coro, loop=loop)
+        return None
 
 
 class ParameterizedCommand(Command):
@@ -262,9 +294,9 @@ class ParameterizedCommand(Command):
             self.executed.emit()
             return result
         except Exception as e:
-            self._last_error = str(e)
-            self.executionFailed.emit(str(e))
-            return None
+            self._last_error = f"{e!s}"
+            self.executionFailed.emit(f"{e!s}")
+            raise
         finally:
             self._is_executing = False
-            self.canExecuteChanged.emit(self.can_execute())
+            self.canExecuteChanged.emit(self.can_execute_with(parameter))

@@ -71,7 +71,8 @@ class Model(ObservableObject):
                     self._validation_errors[property_name] = error
                     return False
             
-            return len(self._validation_errors) == 0
+            # Return validity of only the target property
+            return property_name not in self._validation_errors
         else:
             # Validate all properties
             self._validation_errors.clear()
@@ -101,6 +102,18 @@ class Model(ObservableObject):
         """
         return self._validation_errors.get(property_name)
     
+    def has_errors(self) -> bool:
+        """Check if the model has validation errors."""
+        if self._model:
+            return self._model.has_validation_errors()
+        return False
+    
+    def get_errors(self) -> Dict[str, str]:
+        """Get all validation errors from the model."""
+        if self._model:
+            return self._model.get_validation_errors()
+        return {}
+    
     def has_validation_errors(self) -> bool:
         """Check if the model has any validation errors."""
         return len(self._validation_errors) > 0
@@ -121,11 +134,9 @@ class Model(ObservableObject):
             Dictionary representation of the model
         """
         result = {}
-        for attr_name in dir(self):
-            if not attr_name.startswith('_') and not callable(getattr(self, attr_name)):
-                attr = getattr(self, attr_name)
-                if not isinstance(attr, (classmethod, staticmethod)):
-                    result[attr_name] = attr
+        for attr_name, attr in vars(self).items():
+            if not attr_name.startswith('_') and not callable(attr):
+                result[attr_name] = attr
         return result
     
     @classmethod
@@ -152,10 +163,8 @@ class Model(ObservableObject):
         Args:
             other: Another model of the same type
         """
-        for attr_name in dir(other):
-            if not attr_name.startswith('_') and not callable(getattr(other, attr_name)):
-                if hasattr(self, attr_name):
-                    current_value = getattr(self, attr_name)
-                    new_value = getattr(other, attr_name)
-                    if current_value != new_value:
-                        setattr(self, attr_name, new_value)
+        for attr_name, new_value in vars(other).items():
+            if not attr_name.startswith('_') and hasattr(self, attr_name):
+                current_value = getattr(self, attr_name)
+                if current_value != new_value:
+                    setattr(self, attr_name, new_value)

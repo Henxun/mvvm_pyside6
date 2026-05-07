@@ -4,7 +4,7 @@
 
 ## 项目结构
 
-```
+```text
 mvvm_framework/
 ├── __init__.py              # 包入口，导出核心组件
 ├── core/                    # 核心模块

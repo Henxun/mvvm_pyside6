@@ -152,11 +152,27 @@ class ViewModel(ObservableObject, Generic[M]):
             return self._model.get_validation_errors()
         return {}
     
+    def get_validation_error(self, property_name: str) -> Optional[str]:
+        """
+        Get validation error for a specific property.
+        
+        Args:
+            property_name: Name of the property
+            
+        Returns:
+            Error message or None if no error
+        """
+        if self._model and hasattr(self._model, 'get_validation_error'):
+            return self._model.get_validation_error(property_name)
+        # Fallback to get_errors()
+        return self.get_errors().get(property_name)
+    
     def refresh(self) -> None:
         """Refresh all properties by notifying changes."""
         if self._model:
-            for attr_name in dir(self._model):
-                if not attr_name.startswith('_') and not callable(getattr(self._model, attr_name)):
+            # Only iterate over instance attributes to avoid Qt internals
+            for attr_name in vars(self._model):
+                if not attr_name.startswith('_'):
                     self.notify_property_changed(attr_name)
 
 
@@ -164,18 +180,21 @@ def viewmodel_factory(model_class: Type[M]):
     """
     Decorator factory for creating ViewModel classes.
     
+    Note: User-defined cls.__init__ implementations must use cooperative
+    multiple-inheritance init by calling super().__init__(model, parent)
+    so each __init__ in the MRO runs exactly once.
+    
     Example:
         @viewmodel_factory(Person)
         class PersonViewModel:
-            def __init__(self, model: Person):
-                super().__init__(model)
+            def __init__(self, model: Person, parent=None):
+                super().__init__(model, parent)
                 # ...
     """
     def decorator(cls):
         class GeneratedViewModel(cls, ViewModel[M]):
             def __init__(self, model: M, parent: Optional[QObject] = None):
-                cls.__init__(self, model)
-                ViewModel.__init__(self, model, parent)
+                super().__init__(model, parent)
         
         return GeneratedViewModel
     

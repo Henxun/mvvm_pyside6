@@ -62,9 +62,11 @@ class ObservableObject(QObject):
         Args:
             property_name: Name of the changed property
         """
+        # Always invalidate dependent properties regardless of suppression
+        self._invalidate_dependent_properties(property_name)
+        
         if not self._suppress_notifications:
             self.propertyChanged.emit(property_name)
-            self._invalidate_dependent_properties(property_name)
     
     def suppress_notifications(self) -> None:
         """Temporarily suppress property change notifications."""
@@ -129,19 +131,22 @@ class ObservableObject(QObject):
         else:
             self._computed_property_cache.clear()
     
-    def bind(self, property_name: str, callback: Callable[[Any], None]) -> None:
+    def bind(self, property_name: str, callback: Callable[[Any], None]) -> object:
         """
         Bind a callback to property changes.
         
         Args:
             property_name: Name of the property to bind to
             callback: Function to call when property changes
+            
+        Returns:
+            Connection object that can be used to disconnect the handler
         """
         def handler(name: str):
             if name == property_name:
                 callback(getattr(self, property_name))
         
-        self.propertyChanged.connect(handler)
+        return self.propertyChanged.connect(handler)
 
 
 class ObservableList(QObject):
@@ -210,8 +215,14 @@ class ObservableList(QObject):
     
     def pop(self, index: int = -1) -> T:
         """Remove and return item at index."""
+        # Validate bounds before normalization
+        if index >= len(self._data) or index < -len(self._data):
+            raise IndexError("pop index out of range")
+        
+        # Normalize negative index
         if index < 0:
             index = len(self._data) + index
+        
         value = self._data.pop(index)
         self.itemRemoved.emit(index, value)
         return value
@@ -227,6 +238,16 @@ class ObservableList(QObject):
         self._data.extend(items)
         for i, item in enumerate(items):
             self.itemAdded.emit(start_index + i, item)
+    
+    def reset(self, new_data: List[T]) -> None:
+        """
+        Atomically replace the internal storage with new data and emit listReset.
+        
+        Args:
+            new_data: New list data to replace existing data
+        """
+        self._data = list(new_data)
+        self.listReset.emit()
     
     def to_list(self) -> List[T]:
         """Return a copy of the underlying list."""

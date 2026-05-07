@@ -60,7 +60,7 @@ class PersonViewModel(ViewModel[Person]):
         """Set the person's name."""
         if self.model:
             self.model.name = value
-            self.notify_property_changed("name")
+            # Model will notify via _on_model_property_changed
             self._save_command.notify_can_execute_changed()
     
     @property
@@ -73,7 +73,7 @@ class PersonViewModel(ViewModel[Person]):
         """Set the person's age."""
         if self.model:
             self.model.age = value
-            self.notify_property_changed("age")
+            # Model will notify via _on_model_property_changed
             self._save_command.notify_can_execute_changed()
     
     @property
@@ -86,7 +86,7 @@ class PersonViewModel(ViewModel[Person]):
         """Set the person's email."""
         if self.model:
             self.model.email = value
-            self.notify_property_changed("email")
+            # Model will notify via _on_model_property_changed
             self._save_command.notify_can_execute_changed()
     
     @property
