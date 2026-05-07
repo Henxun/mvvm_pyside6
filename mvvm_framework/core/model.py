@@ -71,7 +71,8 @@ class Model(ObservableObject):
                     self._validation_errors[property_name] = error
                     return False
             
-            return len(self._validation_errors) == 0
+            # Return validity of only the target property
+            return property_name not in self._validation_errors
         else:
             # Validate all properties
             self._validation_errors.clear()
@@ -101,6 +102,14 @@ class Model(ObservableObject):
         """
         return self._validation_errors.get(property_name)
     
+    def has_errors(self) -> bool:
+        """Check if the model has validation errors."""
+        return self.has_validation_errors()
+    
+    def get_errors(self) -> Dict[str, str]:
+        """Get all validation errors from the model."""
+        return self.get_validation_errors()
+    
     def has_validation_errors(self) -> bool:
         """Check if the model has any validation errors."""
         return len(self._validation_errors) > 0
@@ -121,11 +130,29 @@ class Model(ObservableObject):
             Dictionary representation of the model
         """
         result = {}
-        for attr_name in dir(self):
-            if not attr_name.startswith('_') and not callable(getattr(self, attr_name)):
-                attr = getattr(self, attr_name)
-                if not isinstance(attr, (classmethod, staticmethod)):
-                    result[attr_name] = attr
+        
+        # First add non-underscore instance attributes
+        for attr_name, attr in vars(self).items():
+            if not attr_name.startswith('_') and not callable(attr):
+                result[attr_name] = attr
+        
+        # Then iterate over class properties in MRO to include @property-backed attributes
+        for cls in type(self).__mro__:
+            if cls is object:
+                continue
+            for attr_name in dir(cls):
+                if attr_name.startswith('_'):
+                    continue
+                try:
+                    attr = getattr(cls, attr_name)
+                    if isinstance(attr, property):
+                        # Skip callables (methods that might be wrapped as properties)
+                        value = getattr(self, attr_name, None)
+                        if not callable(value):
+                            result[attr_name] = value
+                except (AttributeError, TypeError):
+                    continue
+        
         return result
     
     @classmethod
@@ -152,10 +179,32 @@ class Model(ObservableObject):
         Args:
             other: Another model of the same type
         """
-        for attr_name in dir(other):
-            if not attr_name.startswith('_') and not callable(getattr(other, attr_name)):
-                if hasattr(self, attr_name):
-                    current_value = getattr(self, attr_name)
-                    new_value = getattr(other, attr_name)
-                    if current_value != new_value:
-                        setattr(self, attr_name, new_value)
+        # Get all public property names from both instances' class hierarchy
+        public_props = set()
+        
+        # Collect from instance attrs
+        for attr_name in vars(other):
+            if not attr_name.startswith('_'):
+                public_props.add(attr_name)
+        
+        # Collect from class properties in MRO
+        for cls in type(other).__mro__:
+            if cls is object:
+                continue
+            for attr_name in dir(cls):
+                if attr_name.startswith('_'):
+                    continue
+                try:
+                    attr = getattr(cls, attr_name)
+                    if isinstance(attr, property):
+                        public_props.add(attr_name)
+                except (AttributeError, TypeError):
+                    continue
+        
+        # Update each property if different
+        for attr_name in public_props:
+            if hasattr(self, attr_name):
+                current_value = getattr(self, attr_name)
+                new_value = getattr(other, attr_name)
+                if current_value != new_value:
+                    setattr(self, attr_name, new_value)

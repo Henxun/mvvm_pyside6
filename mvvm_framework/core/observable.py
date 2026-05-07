@@ -54,6 +54,7 @@ class ObservableObject(QObject):
         self._suppress_notifications = False
         self._computed_property_cache: Dict[str, Any] = {}
         self._property_dependencies: Dict[str, Set[str]] = {}
+        self._suppressed_property_changes: Set[str] = set()
     
     def notify_property_changed(self, property_name: str) -> None:
         """
@@ -62,9 +63,22 @@ class ObservableObject(QObject):
         Args:
             property_name: Name of the changed property
         """
+        # Always invalidate dependent properties regardless of suppression
+        self._invalidate_dependent_properties(property_name)
+        
         if not self._suppress_notifications:
             self.propertyChanged.emit(property_name)
-            self._invalidate_dependent_properties(property_name)
+        else:
+            # Track suppressed changes for later emission
+            self._suppressed_property_changes.add(property_name)
+    
+    def _emit_dependent_notifications(self, property_name: str) -> None:
+        """Emit notifications for dependent properties if not suppressed."""
+        if property_name in self._property_dependencies and not self._suppress_notifications:
+            for dependent_prop in self._property_dependencies[property_name]:
+                if dependent_prop in self._computed_property_cache or \
+                   dependent_prop in self._suppressed_property_changes:
+                    self.propertyChanged.emit(dependent_prop)
     
     def suppress_notifications(self) -> None:
         """Temporarily suppress property change notifications."""
@@ -76,11 +90,15 @@ class ObservableObject(QObject):
         
         Args:
             notify_changes: If True, emit notifications for all properties
+                            that changed while suppressed
         """
         self._suppress_notifications = False
         if notify_changes:
-            for prop_name in self._computed_property_cache.keys():
+            # Emit for both computed properties and tracked suppressed changes
+            all_props = self._computed_property_cache.keys() | self._suppressed_property_changes
+            for prop_name in all_props:
                 self.propertyChanged.emit(prop_name)
+            self._suppressed_property_changes.clear()
     
     def register_dependency(self, dependent_property: str, depends_on: str) -> None:
         """
@@ -100,7 +118,7 @@ class ObservableObject(QObject):
             for dependent_prop in self._property_dependencies[property_name]:
                 if dependent_prop in self._computed_property_cache:
                     del self._computed_property_cache[dependent_prop]
-                    self.propertyChanged.emit(dependent_prop)
+                    # Don't emit signal here - let notify_property_changed handle it
     
     def get_cached_value(self, property_name: str, compute_func: Callable[[], Any]) -> Any:
         """
@@ -129,19 +147,22 @@ class ObservableObject(QObject):
         else:
             self._computed_property_cache.clear()
     
-    def bind(self, property_name: str, callback: Callable[[Any], None]) -> None:
+    def bind(self, property_name: str, callback: Callable[[Any], None]) -> object:
         """
         Bind a callback to property changes.
         
         Args:
             property_name: Name of the property to bind to
             callback: Function to call when property changes
+            
+        Returns:
+            Connection object that can be used to disconnect the handler
         """
         def handler(name: str):
             if name == property_name:
                 callback(getattr(self, property_name))
         
-        self.propertyChanged.connect(handler)
+        return self.propertyChanged.connect(handler)
 
 
 class ObservableList(QObject):
@@ -210,8 +231,14 @@ class ObservableList(QObject):
     
     def pop(self, index: int = -1) -> T:
         """Remove and return item at index."""
+        # Validate bounds before normalization
+        if index >= len(self._data) or index < -len(self._data):
+            raise IndexError("pop index out of range")
+        
+        # Normalize negative index
         if index < 0:
             index = len(self._data) + index
+        
         value = self._data.pop(index)
         self.itemRemoved.emit(index, value)
         return value
@@ -227,6 +254,16 @@ class ObservableList(QObject):
         self._data.extend(items)
         for i, item in enumerate(items):
             self.itemAdded.emit(start_index + i, item)
+    
+    def reset(self, new_data: List[T]) -> None:
+        """
+        Atomically replace the internal storage with new data and emit listReset.
+        
+        Args:
+            new_data: New list data to replace existing data
+        """
+        self._data = list(new_data)
+        self.listReset.emit()
     
     def to_list(self) -> List[T]:
         """Return a copy of the underlying list."""

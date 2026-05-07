@@ -60,7 +60,7 @@ class PersonViewModel(ViewModel[Person]):
         """Set the person's name."""
         if self.model:
             self.model.name = value
-            self.notify_property_changed("name")
+            # Model will notify via _on_model_property_changed
             self._save_command.notify_can_execute_changed()
     
     @property
@@ -73,7 +73,7 @@ class PersonViewModel(ViewModel[Person]):
         """Set the person's age."""
         if self.model:
             self.model.age = value
-            self.notify_property_changed("age")
+            # Model will notify via _on_model_property_changed
             self._save_command.notify_can_execute_changed()
     
     @property
@@ -86,7 +86,7 @@ class PersonViewModel(ViewModel[Person]):
         """Set the person's email."""
         if self.model:
             self.model.email = value
-            self.notify_property_changed("email")
+            # Model will notify via _on_model_property_changed
             self._save_command.notify_can_execute_changed()
     
     @property
@@ -99,7 +99,7 @@ class PersonViewModel(ViewModel[Person]):
         """Set the active status."""
         if self.model:
             self.model.is_active = value
-            self.notify_property_changed("is_active")
+            # Model will notify via _on_model_property_changed
     
     @property
     def display_name(self) -> str:
@@ -245,6 +245,12 @@ class PersonCollectionViewModel(ViewModel):
         self._people = ObservableList[Person]()
         self._selected_person: PersonViewModel | None = None
         
+        # Subscribe to list changes to update count property
+        self._people.itemAdded.connect(self._on_people_changed)
+        self._people.itemRemoved.connect(self._on_people_changed)
+        self._people.listCleared.connect(self._on_people_changed)
+        self._people.listReset.connect(self._on_people_changed)
+        
         self._add_command = Command(
             execute=self.add_person,
             can_execute=lambda: True
@@ -254,6 +260,10 @@ class PersonCollectionViewModel(ViewModel):
             execute=self.remove_selected,
             can_execute=self.can_remove_selected
         )
+    
+    def _on_people_changed(self, *args) -> None:
+        """Handle changes to the people list and notify count property."""
+        self.notify_property_changed("count")
     
     @property
     def people(self) -> ObservableList[Person]:
