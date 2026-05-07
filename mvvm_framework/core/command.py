@@ -216,23 +216,29 @@ class AsyncCommand(Command):
             
         Returns:
             None (the coroutine is scheduled asynchronously)
+            
+        Raises:
+            RuntimeError: If no event loop is running. Caller must integrate
+                          an event loop (e.g., using qasync with QApplication).
         """
         import asyncio
         
         if not self.can_execute():
             return None
         
-        # Schedule the async execution
+        # Require a running event loop - don't create idle loops
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
         except RuntimeError:
-            # No event loop in current thread, create a new one
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            raise RuntimeError(
+                "No running event loop found. AsyncCommand requires an active event loop. "
+                "Integrate asyncio with Qt using qasync (e.g., QEventLoop from qasync) "
+                "or ensure an event loop is running before executing async commands."
+            )
         
-        # Create and schedule the coroutine
+        # Create and schedule the coroutine, retaining the task
         coro = self.execute_async(*args, **kwargs)
-        asyncio.ensure_future(coro, loop=loop)
+        self._task = asyncio.ensure_future(coro, loop=loop)
         return None
 
 

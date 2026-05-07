@@ -54,6 +54,7 @@ class ObservableObject(QObject):
         self._suppress_notifications = False
         self._computed_property_cache: Dict[str, Any] = {}
         self._property_dependencies: Dict[str, Set[str]] = {}
+        self._suppressed_property_changes: Set[str] = set()
     
     def notify_property_changed(self, property_name: str) -> None:
         """
@@ -67,6 +68,17 @@ class ObservableObject(QObject):
         
         if not self._suppress_notifications:
             self.propertyChanged.emit(property_name)
+        else:
+            # Track suppressed changes for later emission
+            self._suppressed_property_changes.add(property_name)
+    
+    def _emit_dependent_notifications(self, property_name: str) -> None:
+        """Emit notifications for dependent properties if not suppressed."""
+        if property_name in self._property_dependencies and not self._suppress_notifications:
+            for dependent_prop in self._property_dependencies[property_name]:
+                if dependent_prop in self._computed_property_cache or \
+                   dependent_prop in self._suppressed_property_changes:
+                    self.propertyChanged.emit(dependent_prop)
     
     def suppress_notifications(self) -> None:
         """Temporarily suppress property change notifications."""
@@ -78,11 +90,15 @@ class ObservableObject(QObject):
         
         Args:
             notify_changes: If True, emit notifications for all properties
+                            that changed while suppressed
         """
         self._suppress_notifications = False
         if notify_changes:
-            for prop_name in self._computed_property_cache.keys():
+            # Emit for both computed properties and tracked suppressed changes
+            all_props = self._computed_property_cache.keys() | self._suppressed_property_changes
+            for prop_name in all_props:
                 self.propertyChanged.emit(prop_name)
+            self._suppressed_property_changes.clear()
     
     def register_dependency(self, dependent_property: str, depends_on: str) -> None:
         """
@@ -102,7 +118,7 @@ class ObservableObject(QObject):
             for dependent_prop in self._property_dependencies[property_name]:
                 if dependent_prop in self._computed_property_cache:
                     del self._computed_property_cache[dependent_prop]
-                    self.propertyChanged.emit(dependent_prop)
+                    # Don't emit signal here - let notify_property_changed handle it
     
     def get_cached_value(self, property_name: str, compute_func: Callable[[], Any]) -> Any:
         """

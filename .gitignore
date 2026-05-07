@@ -1,4 +1,3 @@
-```
 # Python
 __pycache__/
 *.pyc
@@ -25,6 +24,15 @@ coverage/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+.tox/
+nox/
+.nox/
+*.so
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
 
 # Logs
 *.log
@@ -44,4 +52,3 @@ Thumbs.db
 *.swp
 *.swo
 *.tmp
-```

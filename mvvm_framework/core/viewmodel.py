@@ -170,10 +170,19 @@ class ViewModel(ObservableObject, Generic[M]):
     def refresh(self) -> None:
         """Refresh all properties by notifying changes."""
         if self._model:
-            # Only iterate over instance attributes to avoid Qt internals
-            for attr_name in vars(self._model):
-                if not attr_name.startswith('_'):
-                    self.notify_property_changed(attr_name)
+            # Iterate over class property descriptors to discover public @property names
+            for cls in type(self._model).__mro__:
+                if cls is object:
+                    continue
+                for attr_name in dir(cls):
+                    if attr_name.startswith('_'):
+                        continue
+                    try:
+                        attr = getattr(cls, attr_name)
+                        if isinstance(attr, property):
+                            self.notify_property_changed(attr_name)
+                    except (AttributeError, TypeError):
+                        continue
 
 
 def viewmodel_factory(model_class: Type[M]):

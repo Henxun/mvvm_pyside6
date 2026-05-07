@@ -104,15 +104,11 @@ class Model(ObservableObject):
     
     def has_errors(self) -> bool:
         """Check if the model has validation errors."""
-        if self._model:
-            return self._model.has_validation_errors()
-        return False
+        return self.has_validation_errors()
     
     def get_errors(self) -> Dict[str, str]:
         """Get all validation errors from the model."""
-        if self._model:
-            return self._model.get_validation_errors()
-        return {}
+        return self.get_validation_errors()
     
     def has_validation_errors(self) -> bool:
         """Check if the model has any validation errors."""
@@ -134,9 +130,29 @@ class Model(ObservableObject):
             Dictionary representation of the model
         """
         result = {}
+        
+        # First add non-underscore instance attributes
         for attr_name, attr in vars(self).items():
             if not attr_name.startswith('_') and not callable(attr):
                 result[attr_name] = attr
+        
+        # Then iterate over class properties in MRO to include @property-backed attributes
+        for cls in type(self).__mro__:
+            if cls is object:
+                continue
+            for attr_name in dir(cls):
+                if attr_name.startswith('_'):
+                    continue
+                try:
+                    attr = getattr(cls, attr_name)
+                    if isinstance(attr, property):
+                        # Skip callables (methods that might be wrapped as properties)
+                        value = getattr(self, attr_name, None)
+                        if not callable(value):
+                            result[attr_name] = value
+                except (AttributeError, TypeError):
+                    continue
+        
         return result
     
     @classmethod
@@ -163,8 +179,32 @@ class Model(ObservableObject):
         Args:
             other: Another model of the same type
         """
-        for attr_name, new_value in vars(other).items():
-            if not attr_name.startswith('_') and hasattr(self, attr_name):
+        # Get all public property names from both instances' class hierarchy
+        public_props = set()
+        
+        # Collect from instance attrs
+        for attr_name in vars(other):
+            if not attr_name.startswith('_'):
+                public_props.add(attr_name)
+        
+        # Collect from class properties in MRO
+        for cls in type(other).__mro__:
+            if cls is object:
+                continue
+            for attr_name in dir(cls):
+                if attr_name.startswith('_'):
+                    continue
+                try:
+                    attr = getattr(cls, attr_name)
+                    if isinstance(attr, property):
+                        public_props.add(attr_name)
+                except (AttributeError, TypeError):
+                    continue
+        
+        # Update each property if different
+        for attr_name in public_props:
+            if hasattr(self, attr_name):
                 current_value = getattr(self, attr_name)
+                new_value = getattr(other, attr_name)
                 if current_value != new_value:
                     setattr(self, attr_name, new_value)
