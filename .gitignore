@@ -1,4 +1,3 @@
-```
 # Python
 __pycache__/
 *.pyc
@@ -37,8 +36,11 @@ htmlcov/
 # Environment variables
 .env
 .env.local
-.env.*
-!.env.example
+*.env.*
+
+# OS generated files
+.DS_Store
+Thumbs.db
 
 # IDE
 .vscode/
