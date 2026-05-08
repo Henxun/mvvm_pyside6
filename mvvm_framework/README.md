@@ -2,6 +2,50 @@
 
 一个基于 PySide6 属性系统实现的通用 QtWidgets MVVM 框架。
 
+## 安装
+
+```bash
+pip install pyside6-mvvm-framework
+```
+
+或者从源码安装：
+
+```bash
+git clone https://github.com/example/pyside6-mvvm-framework.git
+cd pyside6-mvvm-framework
+uv pip install -e .
+```
+
+## 构建和发布
+
+### 使用 uv 构建
+
+```bash
+# 仅构建
+uv run build.py
+
+# 构建并发布到 PyPI
+export PYPI_TOKEN='your-pypi-token'
+uv run build.py --publish
+
+# 构建并发布到 TestPyPI
+export PYPI_TOKEN='your-testpypi-token'
+uv run build.py --publish --test-pypi
+```
+
+### 使用 Shell 脚本
+
+```bash
+# 仅构建
+./build_and_publish.sh
+
+# 构建并发布
+./build_and_publish.sh --publish
+
+# 构建并发布到 TestPyPI
+./build_and_publish.sh --publish --test-pypi
+```
+
 ## 项目结构
 
 ```text
