@@ -1,0 +1,31 @@
+name: Publish Python Package to PyPI
+
+on:
+  push:
+    tags:
+      - 'v*'  # 仅当推送以 v 开头的标签时触发（如 v1.0.0）
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # 必需的权限，用于 OIDC 认证
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5  # 使用 uv 官方提供的 Action
+        with:
+          python-version: "3.11"    # 指定 Python 版本
+
+      - name: Install dependencies (可选)
+        run: uv sync --frozen       # 如果你的构建过程需要依赖，可加上此步
+
+      - name: Build package
+        run: uv build               # 使用 uv 构建包，生成 .whl 和 .tar.gz
+
+      - name: Publish to PyPI
+        run: uv publish             # 使用 uv 直接发布到 PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
