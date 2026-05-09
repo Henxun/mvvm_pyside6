@@ -197,7 +197,9 @@ class Model(ObservableObject):
                 try:
                     attr = getattr(cls, attr_name)
                     if isinstance(attr, property):
-                        public_props.add(attr_name)
+                        # Only include writable properties (those with a setter)
+                        if attr.fset is not None:
+                            public_props.add(attr_name)
                 except (AttributeError, TypeError):
                     continue
         

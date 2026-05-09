@@ -57,6 +57,7 @@ class Command(QObject):
         self._can_execute = can_execute
         self._is_executing = False
         self._last_error: Optional[str] = None
+        self._tasks: set = set()  # Strong-reference set for async tasks
     
     @property
     def is_executing(self) -> bool:
@@ -234,11 +235,13 @@ class AsyncCommand(Command):
                 "No running event loop found. AsyncCommand requires an active event loop. "
                 "Integrate asyncio with Qt using qasync (e.g., QEventLoop from qasync) "
                 "or ensure an event loop is running before executing async commands."
-            )
+            ) from None
         
         # Create and schedule the coroutine, retaining the task
         coro = self.execute_async(*args, **kwargs)
-        self._task = asyncio.ensure_future(coro, loop=loop)
+        task = asyncio.ensure_future(coro, loop=loop)
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
         return None
 
 
@@ -273,7 +276,7 @@ class ParameterizedCommand(Command):
             try:
                 return self._can_execute(parameter)
             except Exception as e:
-                self._last_error = f"Error in can_execute: {str(e)}"
+                self._last_error = f"Error in can_execute: {e!s}"
                 return False
         
         return True

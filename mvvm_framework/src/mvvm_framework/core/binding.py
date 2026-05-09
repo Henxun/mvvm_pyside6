@@ -4,7 +4,7 @@ Provides tools for binding UI elements to ViewModel properties.
 """
 
 from typing import Any, Callable, Optional, Union
-from PySide6.QtCore import QObject, QMetaObject, Qt
+from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QAction
 
@@ -77,7 +77,15 @@ class Binding:
         # ViewModel -> Widget
         def update_widget(value: Any):
             if hasattr(widget, 'setText'):
-                widget.setText(str(value) if value is not None else "")
+                # Suppress widget signals during programmatic update to prevent re-entry
+                if hasattr(widget, 'blockSignals'):
+                    was_blocked = widget.blockSignals(True)
+                    try:
+                        widget.setText(str(value) if value is not None else "")
+                    finally:
+                        widget.blockSignals(was_blocked)
+                else:
+                    widget.setText(str(value) if value is not None else "")
         
         # Initial update
         update_widget(getattr(viewmodel, property_name))
@@ -171,7 +179,7 @@ class Binding:
             if converter:
                 value = converter(value)
             if hasattr(widget, 'setValue'):
-                widget.setValue(int(value) if value is not None else 0)
+                widget.setValue(value)
         
         # Initial update
         update_widget(getattr(viewmodel, property_name))
@@ -302,8 +310,10 @@ class Binding:
         # Also listen to ObservableList changes
         items = getattr(viewmodel, property_name, [])
         if isinstance(items, ObservableList):
-            items.itemAdded.connect(lambda _: update_items())
-            items.itemRemoved.connect(lambda _: update_items())
+            items.itemAdded.connect(lambda *args: update_items())
+            items.itemRemoved.connect(lambda *args: update_items())
+            items.itemChanged.connect(lambda *args: update_items())
+            items.listReset.connect(update_items)
             items.listCleared.connect(update_items)
     
     @staticmethod

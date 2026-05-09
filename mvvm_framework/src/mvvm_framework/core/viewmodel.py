@@ -64,7 +64,11 @@ class ViewModel(ObservableObject, Generic[M]):
     def model(self, value: M) -> None:
         """Set a new model."""
         if self._model:
-            self._model.propertyChanged.disconnect(self._on_model_property_changed)
+            try:
+                self._model.propertyChanged.disconnect(self._on_model_property_changed)
+            except RuntimeError:
+                # Slot was not connected or already disconnected - ignore
+                pass
         
         self._model = value
         
@@ -170,8 +174,8 @@ class ViewModel(ObservableObject, Generic[M]):
     def refresh(self) -> None:
         """Refresh all properties by notifying changes."""
         if self._model:
-            # Iterate over class property descriptors to discover public @property names
-            for cls in type(self._model).__mro__:
+            # Iterate over viewmodel's class MRO to discover public @property names
+            for cls in type(self).__mro__:
                 if cls is object:
                     continue
                 for attr_name in dir(cls):
@@ -203,6 +207,9 @@ def viewmodel_factory(model_class: Type[M]):
     def decorator(cls):
         class GeneratedViewModel(cls, ViewModel[M]):
             def __init__(self, model: M, parent: Optional[QObject] = None):
+                # Runtime validation of model type
+                if not isinstance(model, model_class):
+                    raise TypeError(f"model must be {model_class.__name__}, got {type(model).__name__}")
                 super().__init__(model, parent)
         
         return GeneratedViewModel

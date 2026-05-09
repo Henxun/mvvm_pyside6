@@ -176,6 +176,10 @@ class PersonViewModel(ViewModel[Person]):
             self.notify_property_changed("has_changes")
             self.notify_property_changed("save_status")
             
+            # Refresh command enabled states
+            self._save_command.notify_can_execute_changed()
+            self._reset_command.notify_can_execute_changed()
+            
             print(f"Saved: {self.model}")
     
     def reset(self) -> None:
