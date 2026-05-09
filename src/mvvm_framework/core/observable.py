@@ -3,7 +3,7 @@ Observable Object and List implementations for MVVM framework.
 Provides property change notification system based on PySide6 signals.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Set, TypeVar
+from typing import Any, Callable, Dict, Generic, List, Optional, Set, TypeVar
 from PySide6.QtCore import QObject, Signal, Property as QtProperty
 
 
@@ -68,6 +68,8 @@ class ObservableObject(QObject):
         
         if not self._suppress_notifications:
             self.propertyChanged.emit(property_name)
+            # Emit notifications for dependent properties
+            self._emit_dependent_notifications(property_name)
         else:
             # Track suppressed changes for later emission
             self._suppressed_property_changes.add(property_name)
@@ -156,7 +158,13 @@ class ObservableObject(QObject):
             callback: Function to call when property changes
             
         Returns:
-            Connection object that can be used to disconnect the handler
+            Connection object that can be used to disconnect the handler.
+            The returned Connection is from self.propertyChanged.connect(handler),
+            so callers must use conn.disconnect() to remove the binding.
+            
+        Example:
+            conn = observable.bind("name", lambda v: print(v))
+            # Later: conn.disconnect()
         """
         def handler(name: str):
             if name == property_name:
@@ -165,7 +173,7 @@ class ObservableObject(QObject):
         return self.propertyChanged.connect(handler)
 
 
-class ObservableList(QObject):
+class ObservableList(QObject, Generic[T]):
     """
     A list that notifies when items are added, removed, or changed.
     
@@ -197,8 +205,19 @@ class ObservableList(QObject):
         self.itemChanged.emit(index, value)
     
     def __delitem__(self, index: int) -> None:
-        value = self._data.pop(index)
-        self.itemRemoved.emit(index, value)
+        """Remove item at index or slice of items."""
+        if isinstance(index, slice):
+            # Handle slice deletion
+            indices = range(*index.indices(len(self._data)))
+            # Collect (index, value) pairs before deletion (in ascending order)
+            removed_items = [(i, self._data[i]) for i in sorted(indices, reverse=True)]
+            del self._data[index]
+            # Emit itemRemoved for each removed item (in original index order)
+            for i, value in reversed(removed_items):
+                self.itemRemoved.emit(i, value)
+        else:
+            value = self._data.pop(index)
+            self.itemRemoved.emit(index, value)
     
     def __iter__(self):
         return iter(self._data)
@@ -250,9 +269,11 @@ class ObservableList(QObject):
     
     def extend(self, items: List[T]) -> None:
         """Extend the list by appending elements from the iterable."""
+        # Materialize items into a concrete sequence first to handle generators
+        items_list = list(items)
         start_index = len(self._data)
-        self._data.extend(items)
-        for i, item in enumerate(items):
+        self._data.extend(items_list)
+        for i, item in enumerate(items_list):
             self.itemAdded.emit(start_index + i, item)
     
     def reset(self, new_data: List[T]) -> None:

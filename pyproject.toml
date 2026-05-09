@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "A general-purpose MVVM framework based on PySide6 property system"
 readme = "README.md"
 authors = [
-    { name = "qwen.ai[bot]", email = "qwenlm-intl@service.alibaba.com" }
+    { name = "henxun", email = "1371490145@qq.com" }
 ]
 requires-python = ">=3.12"
 dependencies = [

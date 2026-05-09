@@ -3,7 +3,7 @@ Example: Person ViewModel for MVVM Framework Demo
 """
 
 from mvvm_framework.core import ViewModel, Command, ObservableList
-from mvvm_framework.examples.person_model import Person
+from .person_model import Person
 
 
 class PersonViewModel(ViewModel[Person]):
@@ -175,6 +175,7 @@ class PersonViewModel(ViewModel[Person]):
             # Notify UI of status change
             self.notify_property_changed("has_changes")
             self.notify_property_changed("save_status")
+            self.notify_property_changed("display_name")
             
             # Refresh command enabled states
             self._save_command.notify_can_execute_changed()

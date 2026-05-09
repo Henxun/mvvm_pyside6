@@ -14,7 +14,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette, QColor
 
 from mvvm_framework.core import Binding
-from mvvm_framework.examples.person_viewmodel import PersonViewModel, PersonCollectionViewModel
+from .person_viewmodel import PersonViewModel, PersonCollectionViewModel
 
 
 class PersonView(QWidget):
@@ -287,6 +287,7 @@ class PersonCollectionView(QWidget):
     def _on_selection_changed(self, index: int) -> None:
         """Handle selection change in the list."""
         if index < 0 or index >= len(self.viewmodel.people):
+            self.viewmodel.selected_person = None
             self._show_no_selection()
             return
         
@@ -339,6 +340,7 @@ class PersonCollectionView(QWidget):
     def _on_list_cleared(self) -> None:
         """Handle list cleared."""
         self._refresh_list()
+        self.viewmodel.selected_person = None
         self._show_no_selection()
 
 
@@ -346,6 +348,9 @@ def main():
     """Run the example application."""
     import sys
     from PySide6.QtWidgets import QApplication
+    
+    # Import Person model at function runtime to avoid NameError when called from elsewhere
+    from .person_model import Person
     
     app = QApplication(sys.argv)
     
@@ -357,17 +362,18 @@ def main():
         is_active=True
     )
     
-    # Create ViewModel
-    viewmodel = PersonViewModel(person)
+    # # Create ViewModel
+    # viewmodel = PersonViewModel(person)
     
-    # Create and show View
-    view = PersonView(viewmodel)
+    # # Create and show View
+    # view = PersonView(viewmodel)
+    # view.show()
+    viewmodel = PersonCollectionViewModel()
+    view = PersonCollectionView(viewmodel)
     view.show()
     
     sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-    # Import Person model here to avoid circular imports
-    from mvvm_framework.examples.person_model import Person
     main()
