@@ -5,15 +5,28 @@
 ## 项目结构
 
 ```text
-mvvm_framework/
-├── __init__.py              # 包入口，导出核心组件
-├── core/                    # 核心模块
-│   ├── __init__.py
-│   ├── observable.py        # 可观察对象和列表
-│   ├── model.py             # 模型基类
-│   ├── viewmodel.py         # 视图模型基类
-│   ├── command.py           # 命令模式实现
-│   └── binding.py           # 数据绑定工具
+mvvm_pyside6/
+├── src/
+│   ├── mvvm_framework/      # 核心框架
+│   │   ├── __init__.py
+│   │   └── core/
+│   │       ├── __init__.py
+│   │       ├── observable.py    # 可观察对象和列表
+│   │       ├── model.py         # 模型基类
+│   │       ├── viewmodel.py     # 视图模型基类
+│   │       ├── command.py       # 命令模式实现
+│   │       └── binding.py       # 数据绑定工具
+│   └── examples/            # 示例代码
+│       ├── __init__.py
+│       ├── person_model.py      # Person 数据模型
+│       ├── person_viewmodel.py  # Person 视图模型
+│       └── person_view.py       # Person 视图组件
+├── .gitignore
+├── .python-version
+├── PUBLISH_GUIDE.md
+├── README.md
+├── pyproject.toml
+└── uv.lock
 ```
 
 ## 核心组件
@@ -164,29 +177,16 @@ Binding.bind_checked(viewmodel, "is_active", checkbox)
 运行示例应用：
 
 ```bash
-python -m mvvm_framework.examples.person_view
+cd mvvm_pyside6
+uv run python -m examples.person_view
 ```
 
-或者在代码中使用：
+或者设置 PYTHONPATH：
 
-```python
-import sys
-from PySide6.QtWidgets import QApplication
-from mvvm_framework.examples import Person, PersonViewModel, PersonView
-
-app = QApplication(sys.argv)
-
-# 创建 Model
-person = Person(name="John", age=30, email="john@example.com")
-
-# 创建 ViewModel
-viewmodel = PersonViewModel(person)
-
-# 创建 View
-view = PersonView(viewmodel)
-view.show()
-
-sys.exit(app.exec())
+```bash
+cd mvvm_pyside6
+set PYTHONPATH=src
+python -m examples.person_view
 ```
 
 ## 特性
