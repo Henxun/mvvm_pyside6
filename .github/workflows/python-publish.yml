@@ -17,7 +17,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5  # 使用 uv 官方提供的 Action
         with:
-          python-version: "3.11"    # 指定 Python 版本
+          python-version: "3.12"    # 指定 Python 版本
 
       - name: Install dependencies (可选)
         run: uv sync --frozen       # 如果你的构建过程需要依赖，可加上此步
