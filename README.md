@@ -14,11 +14,6 @@ mvvm_framework/
 │   ├── viewmodel.py         # 视图模型基类
 │   ├── command.py           # 命令模式实现
 │   └── binding.py           # 数据绑定工具
-└── examples/                # 示例代码
-    ├── __init__.py
-    ├── person_model.py      # Person 模型示例
-    ├── person_viewmodel.py  # Person ViewModel 示例
-    └── person_view.py       # Person View 示例
 ```
 
 ## 核心组件
