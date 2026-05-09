@@ -7,11 +7,10 @@ A complete PySide6 view demonstrating data binding with the MVVM framework.
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QPushButton, QSpinBox,
-    QCheckBox, QGroupBox, QComboBox, QListWidget,
+    QCheckBox, QGroupBox, QListWidget,
     QMessageBox, QFrame
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPalette, QColor
 
 from mvvm_framework.core import Binding
 from .person_viewmodel import PersonViewModel, PersonCollectionViewModel
@@ -274,6 +273,7 @@ class PersonCollectionView(QWidget):
         vm.people.itemAdded.connect(self._on_item_added)
         vm.people.itemRemoved.connect(self._on_item_removed)
         vm.people.listCleared.connect(self._on_list_cleared)
+        vm.people.itemPropertyChanged.connect(self._on_item_property_changed)
         
         # Initial population
         self._refresh_list()
@@ -342,6 +342,11 @@ class PersonCollectionView(QWidget):
         self._refresh_list()
         self.viewmodel.selected_person = None
         self._show_no_selection()
+    
+    def _on_item_property_changed(self, index: int, item, property_name: str) -> None:
+        """Handle property changes in list items and update QListWidget display."""
+        if 0 <= index < self.people_list.count():
+            self.people_list.item(index).setText(str(item))
 
 
 def main():

@@ -4,7 +4,7 @@ Provides property change notification system based on PySide6 signals.
 """
 
 from typing import Any, Callable, Dict, Generic, List, Optional, Set, TypeVar
-from PySide6.QtCore import QObject, Signal, Property as QtProperty
+from PySide6.QtCore import QObject, Signal
 
 
 T = TypeVar('T')
@@ -187,12 +187,16 @@ class ObservableList(QObject, Generic[T]):
     itemAdded = Signal(int, object)  # index, value
     itemRemoved = Signal(int, object)  # index, value
     itemChanged = Signal(int, object)  # index, new_value
+    itemPropertyChanged = Signal(int, object, str)  # index, item, property_name
     listCleared = Signal()
     listReset = Signal()
     
     def __init__(self, initial_data: Optional[List[T]] = None, parent: Optional[QObject] = None):
         super().__init__(parent)
         self._data: List[T] = list(initial_data) if initial_data else []
+        self._item_connections: Dict[int, T] = {}
+        for i, item in enumerate(self._data):
+            self._subscribe_to_item(i, item)
     
     def __len__(self) -> int:
         return len(self._data)
@@ -200,24 +204,64 @@ class ObservableList(QObject, Generic[T]):
     def __getitem__(self, index: int) -> T:
         return self._data[index]
     
+    def _subscribe_to_item(self, index: int, item: T) -> None:
+        """Subscribe to property changes for an ObservableObject item."""
+        if isinstance(item, ObservableObject):
+            handler = lambda prop_name, idx=index, itm=item: self._on_item_property_changed(idx, itm, prop_name)
+            self._item_connections[index] = (item, handler)
+            item.propertyChanged.connect(handler)
+    
+    def _unsubscribe_from_item(self, index: int) -> None:
+        """Unsubscribe from property changes for an item at given index."""
+        if index in self._item_connections:
+            item, handler = self._item_connections.pop(index)
+            if isinstance(item, ObservableObject):
+                try:
+                    item.propertyChanged.disconnect(handler)
+                except Exception:
+                    pass
+    
+    def _reindex_subscriptions(self, start_index: int) -> None:
+        """Reindex subscriptions after items are inserted or removed."""
+        old_connections = dict(self._item_connections)
+        self._item_connections.clear()
+        
+        for i, item in enumerate(self._data):
+            if i < start_index and i in old_connections:
+                old_item, handler = old_connections[i]
+                if old_item is item:
+                    self._item_connections[i] = (item, handler)
+                else:
+                    self._subscribe_to_item(i, item)
+            else:
+                self._subscribe_to_item(i, item)
+    
+    def _on_item_property_changed(self, index: int, item: T, property_name: str) -> None:
+        """Handle property changes in items and emit itemPropertyChanged signal."""
+        self.itemPropertyChanged.emit(index, item, property_name)
+    
     def __setitem__(self, index: int, value: T) -> None:
+        self._unsubscribe_from_item(index)
         self._data[index] = value
+        self._subscribe_to_item(index, value)
         self.itemChanged.emit(index, value)
     
     def __delitem__(self, index: int) -> None:
         """Remove item at index or slice of items."""
         if isinstance(index, slice):
-            # Handle slice deletion
             indices = range(*index.indices(len(self._data)))
-            # Collect (index, value) pairs before deletion (in ascending order)
             removed_items = [(i, self._data[i]) for i in sorted(indices, reverse=True)]
+            for i, _ in removed_items:
+                self._unsubscribe_from_item(i)
             del self._data[index]
-            # Emit itemRemoved for each removed item (in original index order)
             for i, value in reversed(removed_items):
                 self.itemRemoved.emit(i, value)
+            self._reindex_subscriptions(index.start or 0)
         else:
+            self._unsubscribe_from_item(index)
             value = self._data.pop(index)
             self.itemRemoved.emit(index, value)
+            self._reindex_subscriptions(index)
     
     def __iter__(self):
         return iter(self._data)
@@ -232,19 +276,24 @@ class ObservableList(QObject, Generic[T]):
         """Add an item to the end of the list."""
         index = len(self._data)
         self._data.append(item)
+        self._subscribe_to_item(index, item)
         self.itemAdded.emit(index, item)
     
     def insert(self, index: int, item: T) -> None:
         """Insert an item at the specified index."""
         self._data.insert(index, item)
+        self._subscribe_to_item(index, item)
+        self._reindex_subscriptions(index + 1)
         self.itemAdded.emit(index, item)
     
     def remove(self, item: T) -> None:
         """Remove the first occurrence of an item."""
         try:
             index = self._data.index(item)
+            self._unsubscribe_from_item(index)
             self._data.pop(index)
             self.itemRemoved.emit(index, item)
+            self._reindex_subscriptions(index)
         except ValueError:
             pass
     
@@ -258,22 +307,26 @@ class ObservableList(QObject, Generic[T]):
         if index < 0:
             index = len(self._data) + index
         
+        self._unsubscribe_from_item(index)
         value = self._data.pop(index)
         self.itemRemoved.emit(index, value)
+        self._reindex_subscriptions(index)
         return value
     
     def clear(self) -> None:
         """Remove all items from the list."""
+        for i in list(self._item_connections.keys()):
+            self._unsubscribe_from_item(i)
         self._data.clear()
         self.listCleared.emit()
     
     def extend(self, items: List[T]) -> None:
         """Extend the list by appending elements from the iterable."""
-        # Materialize items into a concrete sequence first to handle generators
         items_list = list(items)
         start_index = len(self._data)
         self._data.extend(items_list)
         for i, item in enumerate(items_list):
+            self._subscribe_to_item(start_index + i, item)
             self.itemAdded.emit(start_index + i, item)
     
     def reset(self, new_data: List[T]) -> None:
@@ -283,7 +336,11 @@ class ObservableList(QObject, Generic[T]):
         Args:
             new_data: New list data to replace existing data
         """
+        for i in list(self._item_connections.keys()):
+            self._unsubscribe_from_item(i)
         self._data = list(new_data)
+        for i, item in enumerate(self._data):
+            self._subscribe_to_item(i, item)
         self.listReset.emit()
     
     def to_list(self) -> List[T]:

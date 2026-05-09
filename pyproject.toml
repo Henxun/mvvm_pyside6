@@ -1,6 +1,6 @@
 [project]
 name = "mvvm-framework"
-version = "1.0.0"
+version = "0.1.0"
 description = "A general-purpose MVVM framework based on PySide6 property system"
 readme = "README.md"
 authors = [
