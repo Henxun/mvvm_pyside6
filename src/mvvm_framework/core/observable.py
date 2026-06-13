@@ -207,7 +207,13 @@ class ObservableList(QObject, Generic[T]):
     def _subscribe_to_item(self, index: int, item: T) -> None:
         """Subscribe to property changes for an ObservableObject item."""
         if isinstance(item, ObservableObject):
-            handler = lambda prop_name, idx=index, itm=item: self._on_item_property_changed(idx, itm, prop_name)
+            def handler(prop_name, idx=index, itm=item):
+                # Look up the current index of the item in case it has moved
+                try:
+                    current_index = self._data.index(itm)
+                except ValueError:
+                    current_index = idx
+                self._on_item_property_changed(current_index, itm, prop_name)
             self._item_connections[index] = (item, handler)
             item.propertyChanged.connect(handler)
     
@@ -226,14 +232,20 @@ class ObservableList(QObject, Generic[T]):
         old_connections = dict(self._item_connections)
         self._item_connections.clear()
         
+        # Re-subscribe all items from start_index onwards
+        # The items before start_index remain unchanged
         for i, item in enumerate(self._data):
             if i < start_index and i in old_connections:
                 old_item, handler = old_connections[i]
                 if old_item is item:
+                    # Item hasn't moved, keep the old handler
                     self._item_connections[i] = (item, handler)
                 else:
+                    # Item has changed, create new subscription
                     self._subscribe_to_item(i, item)
             else:
+                # Items from start_index onwards or not in old connections
+                # Need to create new subscriptions with updated indices
                 self._subscribe_to_item(i, item)
     
     def _on_item_property_changed(self, index: int, item: T, property_name: str) -> None:

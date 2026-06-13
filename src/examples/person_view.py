@@ -352,7 +352,6 @@ class PersonCollectionView(QWidget):
     def _on_item_added(self, index: int, person) -> None:
         """Handle item added to collection."""
         self.people_list.insertItem(index, str(person))
-        self._refresh_list()
 
     @Slot(int, object)
     def _on_item_removed(self, index: int, person) -> None:

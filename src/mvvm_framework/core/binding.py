@@ -476,7 +476,7 @@ class Binding:
             widget: Widget to bind to (QLineEdit, QLabel, etc.)
             two_way: If True, create a two-way binding
         """
-        _TextBindingHandler(viewmodel, property_name, widget, two_way)
+        _TextBindingHandler(viewmodel, property_name, widget, two_way, parent=widget)
     
     @staticmethod
     def bind_label(
@@ -508,7 +508,7 @@ class Binding:
             property_name: Name of the property to bind
             widget: Checkable widget (QCheckBox, QRadioButton, etc.)
         """
-        _CheckedBindingHandler(viewmodel, property_name, widget)
+        _CheckedBindingHandler(viewmodel, property_name, widget, parent=widget)
     
     @staticmethod
     def bind_value(
@@ -526,7 +526,7 @@ class Binding:
             widget: Value widget (QSpinBox, QSlider, etc.)
             converter: Optional value converter
         """
-        _ValueBindingHandler(viewmodel, property_name, widget, converter)
+        _ValueBindingHandler(viewmodel, property_name, widget, converter, parent=widget)
     
     @staticmethod
     def bind_command(
@@ -544,7 +544,8 @@ class Binding:
         """
         command = getattr(viewmodel, command_name, None)
         if command is not None:
-            _CommandBindingHandler(command, widget)
+            parent = widget if isinstance(widget, QWidget) else None
+            _CommandBindingHandler(command, widget, parent=parent)
     
     @staticmethod
     def bind_visibility(
@@ -562,7 +563,7 @@ class Binding:
             widget: Widget to bind to
             inverse: If True, hide when True, show when False
         """
-        _VisibilityBindingHandler(viewmodel, property_name, widget, inverse)
+        _VisibilityBindingHandler(viewmodel, property_name, widget, inverse, parent=widget)
     
     @staticmethod
     def bind_items(
@@ -580,7 +581,7 @@ class Binding:
             widget: ComboBox or ListWidget
             display_member: Property name to display for each item
         """
-        _ItemsBindingHandler(viewmodel, property_name, widget, display_member)
+        _ItemsBindingHandler(viewmodel, property_name, widget, display_member, parent=widget)
     
     @staticmethod
     def bind_validation_error(
@@ -598,4 +599,4 @@ class Binding:
             widget: Widget to style on error
             error_label: Optional label to show error message
         """
-        _ValidationBindingHandler(viewmodel, property_name, widget, error_label)
+        _ValidationBindingHandler(viewmodel, property_name, widget, error_label, parent=widget)
