@@ -1,0 +1,64 @@
+/* Person View Styles */
+
+/* Title label */
+QLabel[css_class="title"] {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* Display name label */
+QLabel[css_class="display_name"] {
+    font-style: italic;
+    color: #555;
+}
+
+/* Save status label */
+QLabel[css_class="save_status"] {
+    color: #888;
+    font-size: 12px;
+}
+
+/* Error label */
+QLabel[css_class="error"] {
+    color: red;
+    font-size: 12px;
+}
+
+/* Placeholder label */
+QLabel[css_class="placeholder"] {
+    color: #888;
+    padding: 50px;
+}
+
+/* Delete/Danger button */
+QPushButton[css_class="danger"] {
+    color: red;
+}
+
+/* Button styles */
+QPushButton {
+    min-width: 70px;
+}
+
+QPushButton:disabled {
+    color: gray;
+}
+
+/* Group box styles */
+QGroupBox {
+    font-weight: bold;
+}
+
+/* Form layout styles */
+QFormLayout {
+    spacing: 6px;
+}
+
+/* Line edit styles */
+QLineEdit {
+    padding: 4px;
+}
+
+QLineEdit[error="true"] {
+    border: 1px solid red;
+}

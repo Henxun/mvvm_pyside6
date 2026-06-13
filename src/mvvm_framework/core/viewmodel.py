@@ -4,7 +4,7 @@ Acts as an intermediary between Model and View.
 """
 
 from typing import Any, Dict, Generic, Optional, Type, TypeVar
-from PySide6.QtCore import QObject
+from PySide6.QtCore import QObject, Slot
 
 from .observable import ObservableObject
 from .model import Model
@@ -74,11 +74,12 @@ class ViewModel(ObservableObject, Generic[M]):
         
         if self._model:
             self._model.propertyChanged.connect(self._on_model_property_changed)
-    
+
+    @Slot(str)
     def _on_model_property_changed(self, property_name: str) -> None:
         """
         Handle property changes from the model.
-        
+
         Args:
             property_name: Name of the changed property
         """

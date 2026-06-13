@@ -2,8 +2,13 @@
 Example: Person ViewModel for MVVM Framework Demo
 """
 
+import logging
+
 from mvvm_framework.core import ViewModel, Command, ObservableList
 from .person_model import Person
+
+
+logger = logging.getLogger(__name__)
 
 
 class PersonViewModel(ViewModel[Person]):
@@ -171,17 +176,17 @@ class PersonViewModel(ViewModel[Person]):
             self._original_name = self.model.name
             self._original_age = self.model.age
             self._original_email = self.model.email
-            
+
             # Notify UI of status change
             self.notify_property_changed("has_changes")
             self.notify_property_changed("save_status")
             self.notify_property_changed("display_name")
-            
+
             # Refresh command enabled states
             self._save_command.notify_can_execute_changed()
             self._reset_command.notify_can_execute_changed()
-            
-            print(f"Saved: {self.model}")
+
+            logger.info("Saved: %s", self.model)
     
     def reset(self) -> None:
         """Reset to original values."""
@@ -199,7 +204,7 @@ class PersonViewModel(ViewModel[Person]):
     
     def delete(self) -> None:
         """Delete the person (in a real app, would remove from collection)."""
-        print(f"Deleting: {self.model}")
+        logger.info("Deleting: %s", self.model)
         # In a real application, you would notify a parent ViewModel
         # to remove this item from a collection
     
@@ -312,8 +317,8 @@ class PersonCollectionViewModel(ViewModel):
         person = Person(name="New Person", age=25)
         self._people.append(person)
         self.notify_property_changed("count")
-        print(f"Added person: {person}")
-    
+        logger.info("Added person: %s", person)
+
     def remove_selected(self) -> None:
         """Remove the selected person."""
         if self._selected_person and self._selected_person.model:
@@ -322,7 +327,7 @@ class PersonCollectionViewModel(ViewModel):
                 self._people.remove(person)
                 self.notify_property_changed("count")
                 self.selected_person = None
-                print(f"Removed person: {person}")
+                logger.info("Removed person: %s", person)
     
     def load_sample_data(self) -> None:
         """Load sample data for demonstration."""
